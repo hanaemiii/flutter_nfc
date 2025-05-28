@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Flutter Locker Project</string>
+    <string name="error_title">Error</string>
+    <string name="error_message">An error occurred during NFC processing.</string>
+</resources>
