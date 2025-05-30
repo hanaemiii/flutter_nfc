@@ -12,7 +12,6 @@ class _LockControlPageState extends State<LockControlPage> {
   final _supervisorKeyController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _oldPasswordController = TextEditingController();
   final _changeNewPasswordController = TextEditingController();
 
   final _lockService = SmackLockService();
@@ -25,7 +24,6 @@ class _LockControlPageState extends State<LockControlPage> {
     super.initState();
 
     _lockService.lockPresenceStream.listen((present) {
-      print("Lock presence event: $present"); 
       setState(() {
         _lockPresent = present;
       });
@@ -41,7 +39,9 @@ class _LockControlPageState extends State<LockControlPage> {
   Future<void> _setupNewLock() async {
     _updateStatus('Setting up lock...');
     print(_supervisorKeyController.text);
-    print(_newPasswordController.text,);
+    print(
+      _newPasswordController.text,
+    );
     final result = await _lockService.setupNewLock(
       _supervisorKeyController.text,
       _newPasswordController.text,
@@ -57,16 +57,15 @@ class _LockControlPageState extends State<LockControlPage> {
 
   Future<void> _lockLock() async {
     _updateStatus('Locking lock...');
-    final result = await _lockService.lockLock();
+    final result = await _lockService.lockLock(_passwordController.text);
     _updateStatus(result);
   }
 
   Future<void> _changePassword() async {
     _updateStatus('Changing password...');
     final result = await _lockService.changePassword(
-      _oldPasswordController.text,
-      _changeNewPasswordController.text,
       _supervisorKeyController.text,
+      _changeNewPasswordController.text,
     );
     _updateStatus(result);
   }
@@ -76,7 +75,6 @@ class _LockControlPageState extends State<LockControlPage> {
     _supervisorKeyController.dispose();
     _newPasswordController.dispose();
     _passwordController.dispose();
-    _oldPasswordController.dispose();
     _changeNewPasswordController.dispose();
     super.dispose();
   }
@@ -129,8 +127,8 @@ class _LockControlPageState extends State<LockControlPage> {
             Text('Change Password',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             TextField(
-              controller: _oldPasswordController,
-              decoration: InputDecoration(labelText: 'Old Password'),
+              controller: _supervisorKeyController,
+              decoration: InputDecoration(labelText: 'Supervisor Key'),
               obscureText: true,
             ),
             TextField(

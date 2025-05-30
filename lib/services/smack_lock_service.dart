@@ -48,18 +48,24 @@ class SmackLockService {
 
   Future<String> unlockLock(String password) async {
     try {
-      final String result = await platform.invokeMethod('unlockLock', {
+      final String? result = await platform.invokeMethod('unlockLock', {
         'password': password,
       });
-      return result;
+      if (result != null) {
+        return result;
+      } else {
+        return "Unlock failed, no result returned.";
+      }
     } on PlatformException catch (e) {
       return "Failed to unlock lock: '${e.message}'.";
     }
   }
 
-  Future<String> lockLock() async {
+  Future<String> lockLock(String password) async {
     try {
-      final String result = await platform.invokeMethod('lockLock');
+      final String result = await platform.invokeMethod('lockLock',{
+        'password': password,
+      });
       return result;
     } on PlatformException catch (e) {
       return "Failed to lock lock: '${e.message}'.";
@@ -67,12 +73,13 @@ class SmackLockService {
   }
 
   Future<String> changePassword(
-      String oldPassword, String newPassword, String supervisorKey) async {
+    String supervisorKey,
+    String newPassword,
+  ) async {
     try {
       final String result = await platform.invokeMethod('changePassword', {
-        'oldPassword': oldPassword,
-        'newPassword': newPassword,
         'supervisorKey': supervisorKey,
+        'newPassword': newPassword,
       });
       return result;
     } on PlatformException catch (e) {
