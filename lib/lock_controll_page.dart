@@ -23,7 +23,15 @@ class _LockControlPageState extends State<LockControlPage> {
   void initState() {
     super.initState();
 
+    // Listen to native-pushed lock presence updates
     _lockService.lockPresenceStream.listen((present) {
+      setState(() {
+        _lockPresent = present;
+      });
+    });
+
+    // Actively check for lock on init (especially for iOS)
+    _lockService.checkLockPresence().then((present) {
       setState(() {
         _lockPresent = present;
       });
@@ -38,10 +46,6 @@ class _LockControlPageState extends State<LockControlPage> {
 
   Future<void> _setupNewLock() async {
     _updateStatus('Setting up lock...');
-    print(_supervisorKeyController.text);
-    print(
-      _newPasswordController.text,
-    );
     final result = await _lockService.setupNewLock(
       _supervisorKeyController.text,
       _newPasswordController.text,
@@ -70,6 +74,13 @@ class _LockControlPageState extends State<LockControlPage> {
     _updateStatus(result);
   }
 
+  Future<void> _manualCheckLockPresence() async {
+    final present = await _lockService.checkLockPresence();
+    setState(() {
+      _lockPresent = present;
+    });
+  }
+
   @override
   void dispose() {
     _supervisorKeyController.dispose();
@@ -89,9 +100,14 @@ class _LockControlPageState extends State<LockControlPage> {
         padding: EdgeInsets.all(16),
         child: Column(
           children: [
-            Text(_lockPresent ? 'Lock detected!' : 'No lock detected'),
-            Text('Setup New Lock',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(_lockPresent ? '🔓 Lock detected!' : '🔒 No lock detected'),
+            SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: _manualCheckLockPresence,
+              child: Text('Check Lock Presence'),
+            ),
+            Divider(height: 32),
+            Text('Setup New Lock', style: TextStyle(fontWeight: FontWeight.bold)),
             TextField(
               controller: _supervisorKeyController,
               decoration: InputDecoration(labelText: 'Supervisor Key'),
@@ -124,8 +140,7 @@ class _LockControlPageState extends State<LockControlPage> {
               child: Text('Lock'),
             ),
             Divider(height: 32),
-            Text('Change Password',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Change Password', style: TextStyle(fontWeight: FontWeight.bold)),
             TextField(
               controller: _supervisorKeyController,
               decoration: InputDecoration(labelText: 'Supervisor Key'),

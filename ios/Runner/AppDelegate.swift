@@ -1,6 +1,6 @@
-import UIKit
 import Flutter
 import SmackSDK
+import UIKit
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -12,7 +12,8 @@ import SmackSDK
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
     let controller = window?.rootViewController as! FlutterViewController
-    let methodChannel = FlutterMethodChannel(name: channelName, binaryMessenger: controller.binaryMessenger)
+    let methodChannel = FlutterMethodChannel(
+      name: channelName, binaryMessenger: controller.binaryMessenger)
 
     let config = SmackConfig(logging: CombinedLogger(debugPrinter: DebugPrinter()))
     let client = SmackClient(config: config)
@@ -24,13 +25,24 @@ import SmackSDK
 
       switch call.method {
       case "lockPresent":
-        // No-op method to satisfy the call
-        result("Smack SDK initialized successfully")
+        print("🔄 Reaching native lockPresent method")
+
+        self.lockApi?.getLock(cancelIfNotSetup: false) { lockResult in
+          switch lockResult {
+          case .success:
+            print("✅ Lock detected")
+            result(true)  // <-- This sends the result back to Flutter
+          case .failure(let error):
+            print("❌ Lock detection failed: \(error)")
+            result(false)  // <-- Still respond back to avoid hanging
+          }
+        }
 
       case "setupNewLock":
         guard let args = call.arguments as? [String: String],
-              let supervisorKey = args["supervisorKey"],
-              let newPassword = args["newPassword"] else {
+          let supervisorKey = args["supervisorKey"],
+          let newPassword = args["newPassword"]
+        else {
           result(FlutterError(code: "INVALID_ARGS", message: "Missing arguments", details: nil))
           return
         }
@@ -38,8 +50,9 @@ import SmackSDK
 
       case "changePassword":
         guard let args = call.arguments as? [String: String],
-              let supervisorKey = args["supervisorKey"],
-              let newPassword = args["newPassword"] else {
+          let supervisorKey = args["supervisorKey"],
+          let newPassword = args["newPassword"]
+        else {
           result(FlutterError(code: "INVALID_ARGS", message: "Missing arguments", details: nil))
           return
         }
@@ -47,15 +60,34 @@ import SmackSDK
 
       case "unlockLock":
         guard let args = call.arguments as? [String: String],
-              let password = args["password"] else {
-          result(FlutterError(code: "INVALID_ARGS", message: "Missing arguments", details: nil))
+          let password = args["password"]
+        else {
+          result(
+            FlutterError(
+              code: "INVALID_ARGS",
+              message: "Missing arguments",
+              details: nil))
           return
         }
-        self.unlockLock(password: password, result: result)
+        let info = LockActionInformation(
+          userName: "MyUserName",
+          date: Date(),
+          key: Array(password.utf8)
+        )
+        self.lockApi?.unlock(information: info) { unlockResult in
+          switch unlockResult {
+          case .success:
+            result("Unlocked")
+          case .failure(let err):
+            print("Unlock error: \(err)")
+            result("Failed to unlock")
+          }
+        }
 
       case "lockLock":
         guard let args = call.arguments as? [String: String],
-              let password = args["password"] else {
+          let password = args["password"]
+        else {
           result(FlutterError(code: "INVALID_ARGS", message: "Missing arguments", details: nil))
           return
         }
@@ -69,7 +101,9 @@ import SmackSDK
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
-  private func setupNewLock(supervisorKey: String, newPassword: String, result: @escaping FlutterResult) {
+  private func setupNewLock(
+    supervisorKey: String, newPassword: String, result: @escaping FlutterResult
+  ) {
     lockApi?.getLock(cancelIfNotSetup: false) { lockResult in
       switch lockResult {
       case .success:
@@ -110,7 +144,9 @@ import SmackSDK
     }
   }
 
-  private func changePassword(supervisorKey: String, newPassword: String, result: @escaping FlutterResult) {
+  private func changePassword(
+    supervisorKey: String, newPassword: String, result: @escaping FlutterResult
+  ) {
     let setupInfo = LockSetupInformation(
       userName: "MyUserName",
       date: Date(),
@@ -130,6 +166,7 @@ import SmackSDK
   }
 
   private func unlockLock(password: String, result: @escaping FlutterResult) {
+   
     let actionInfo = LockActionInformation(
       userName: "MyUserName",
       date: Date(),
