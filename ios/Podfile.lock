@@ -1,0 +1,36 @@
+PODS:
+  - CryptoSwift (1.8.4)
+  - Flutter (1.0.0)
+  - Resolver (1.5.1)
+  - SmackSDK (1.5.0):
+    - CryptoSwift (~> 1.8.3)
+    - Resolver (~> 1.5.1)
+    - SwiftLint (~> 0.57.1)
+  - SwiftLint (0.57.1)
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - SmackSDK (from `./SmackSDK`)
+
+SPEC REPOS:
+  trunk:
+    - CryptoSwift
+    - Resolver
+    - SwiftLint
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  SmackSDK:
+    :path: "./SmackSDK"
+
+SPEC CHECKSUMS:
+  CryptoSwift: e64e11850ede528a02a0f3e768cec8e9d92ecb90
+  Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
+  Resolver: 0e2ce51257e9366c54afe1b9e9be25059e9b9300
+  SmackSDK: a016240ad575ec2539c411a1ec8b7c827fe29358
+  SwiftLint: 92196976e597b9afec5dbe374810103e6c1d9d7c
+
+PODFILE CHECKSUM: 2a9e2ea1b80eb17be55af72907eb549dc5397001
+
+COCOAPODS: 1.16.2

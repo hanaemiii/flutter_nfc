@@ -1,17 +1,18 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/services.dart';
 
 class SmackLockService {
   static const platform =
       MethodChannel('com.example.flutter_locker_project/smack');
 
-  // StreamController to broadcast lock presence updates
   final StreamController<bool> _lockPresenceController =
       StreamController<bool>.broadcast();
 
   SmackLockService() {
-    // Setup method call handler once
-    platform.setMethodCallHandler(_handleNativeCalls);
+    if (Platform.isIOS) {
+      platform.setMethodCallHandler(_handleNativeCalls);
+    }
   }
 
   Stream<bool> get lockPresenceStream => _lockPresenceController.stream;
@@ -22,6 +23,21 @@ class SmackLockService {
     if (call.method == 'lockPresent') {
       final bool present = call.arguments as bool;
       _lockPresenceController.add(present);
+    }
+  }
+
+  Future<bool> checkLockPresence() async {
+    if (!Platform.isIOS) {
+      print("checkLockPresence is only supported on iOS for now.");
+      return false;
+    }
+
+    try {
+      final bool result = await platform.invokeMethod('lockPresent');
+      return result;
+    } on PlatformException catch (e) {
+      print("Failed to check lock presence: '${e.message}'.");
+      return false;
     }
   }
 
@@ -36,11 +52,7 @@ class SmackLockService {
         'supervisorKey': supervisorKey,
         'newPassword': newPassword,
       });
-      if (result != null) {
-        return result;
-      } else {
-        return "Lock setup failed, no result returned.";
-      }
+      return result ?? "Lock setup failed, no result returned.";
     } on PlatformException catch (e) {
       return "Failed to setup lock: '${e.message}'.";
     }
@@ -51,11 +63,7 @@ class SmackLockService {
       final String? result = await platform.invokeMethod('unlockLock', {
         'password': password,
       });
-      if (result != null) {
-        return result;
-      } else {
-        return "Unlock failed, no result returned.";
-      }
+      return result ?? "Unlock failed, no result returned.";
     } on PlatformException catch (e) {
       return "Failed to unlock lock: '${e.message}'.";
     }
@@ -63,7 +71,7 @@ class SmackLockService {
 
   Future<String> lockLock(String password) async {
     try {
-      final String result = await platform.invokeMethod('lockLock',{
+      final String result = await platform.invokeMethod('lockLock', {
         'password': password,
       });
       return result;
@@ -73,9 +81,7 @@ class SmackLockService {
   }
 
   Future<String> changePassword(
-    String supervisorKey,
-    String newPassword,
-  ) async {
+      String supervisorKey, String newPassword) async {
     try {
       final String result = await platform.invokeMethod('changePassword', {
         'supervisorKey': supervisorKey,
