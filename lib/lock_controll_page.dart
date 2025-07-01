@@ -107,7 +107,8 @@ class _LockControlPageState extends State<LockControlPage> {
               child: Text('Check Lock Presence'),
             ),
             Divider(height: 32),
-            Text('Setup New Lock', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Setup New Lock',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             TextField(
               controller: _supervisorKeyController,
               decoration: InputDecoration(labelText: 'Supervisor Key'),
@@ -140,7 +141,8 @@ class _LockControlPageState extends State<LockControlPage> {
               child: Text('Lock'),
             ),
             Divider(height: 32),
-            Text('Change Password', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Change Password',
+                style: TextStyle(fontWeight: FontWeight.bold)),
             TextField(
               controller: _supervisorKeyController,
               decoration: InputDecoration(labelText: 'Supervisor Key'),

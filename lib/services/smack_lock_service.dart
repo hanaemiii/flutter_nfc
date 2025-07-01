@@ -3,29 +3,29 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 class SmackLockService {
-  static const platform = MethodChannel('com.example.flutter_locker_project/smack');
+  static const platform =
+      MethodChannel('com.example.flutter_locker_project/smack');
 
-  final StreamController<bool> _lockPresenceController = StreamController<bool>.broadcast();
+  final StreamController<bool> _lockPresenceController =
+      StreamController<bool>.broadcast();
 
   SmackLockService() {
     if (Platform.isIOS) {
-      // iOS will listen to lock presence updates (optional)
       platform.setMethodCallHandler(_handleNativeCalls);
     }
   }
 
   Stream<bool> get lockPresenceStream => _lockPresenceController.stream;
 
-  // iOS native-to-dart callback handler (used if native pushes updates)
   Future<void> _handleNativeCalls(MethodCall call) async {
-    print('Received native method call: ${call.method} with arguments: ${call.arguments}');
+    print(
+        'Received native method call: ${call.method} with arguments: ${call.arguments}');
     if (call.method == 'lockPresent') {
       final bool present = call.arguments as bool;
       _lockPresenceController.add(present);
     }
   }
 
-  // 🔍 NEW: Check lock presence (iOS: native call, Android: mocked or implemented later)
   Future<bool> checkLockPresence() async {
     if (!Platform.isIOS) {
       print("checkLockPresence is only supported on iOS for now.");
@@ -41,7 +41,8 @@ class SmackLockService {
     }
   }
 
-  Future<String> setupNewLock(String? supervisorKey, String? newPassword) async {
+  Future<String> setupNewLock(
+      String? supervisorKey, String? newPassword) async {
     if (supervisorKey == null || newPassword == null) {
       return "Supervisor key or password is null.";
     }
@@ -79,7 +80,8 @@ class SmackLockService {
     }
   }
 
-  Future<String> changePassword(String supervisorKey, String newPassword) async {
+  Future<String> changePassword(
+      String supervisorKey, String newPassword) async {
     try {
       final String result = await platform.invokeMethod('changePassword', {
         'supervisorKey': supervisorKey,
