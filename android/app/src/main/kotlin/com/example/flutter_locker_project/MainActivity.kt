@@ -73,7 +73,10 @@ class MainActivity : FlutterFragmentActivity() {
                 "setupNewLock" -> {
                     val supervisorKey = call.argument<String>("supervisorKey") ?: ""
                     val newPassword = call.argument<String>("newPassword") ?: ""
+                    val userName = call.argument<String>("userName") ?: ""
+
                     registrationViewModel.setupNewLock(
+                            userName,
                             supervisorKey,
                             newPassword,
                             onComplete = { success ->
@@ -87,7 +90,10 @@ class MainActivity : FlutterFragmentActivity() {
                 "changePassword" -> {
                     val supervisorKey = call.argument<String>("supervisorKey") ?: ""
                     val newPassword = call.argument<String>("newPassword") ?: ""
+                    val userName = call.argument<String>("userName") ?: ""
+
                     registrationViewModel.changePassword(
+                            userName,
                             supervisorKey,
                             newPassword,
                             onComplete = { success ->
@@ -100,7 +106,10 @@ class MainActivity : FlutterFragmentActivity() {
                 }
                 "unlockLock" -> {
                     val password = call.argument<String>("password") ?: ""
+                    val userName = call.argument<String>("userName") ?: ""
+
                     registrationViewModel.unlockLock(
+                            userName,
                             password,
                             onComplete = { success ->
                                 result.success(if (success) "Unlocked" else "Failed to unlock")
@@ -109,7 +118,10 @@ class MainActivity : FlutterFragmentActivity() {
                 }
                 "lockLock" -> {
                     val password = call.argument<String>("password") ?: ""
+                    val userName = call.argument<String>("userName") ?: ""
+
                     registrationViewModel.lockLock(
+                            userName,
                             password,
                             onComplete = { success ->
                                 result.success(if (success) "Locked" else "Failed to lock")
@@ -138,7 +150,12 @@ class RegistrationViewModel(private val smackSdk: SmackSdk) : ViewModel() {
 
     val setupResult = androidx.lifecycle.MutableLiveData<Boolean>()
 
-    fun setupNewLock(supervisorKey: String, newPassword: String, onComplete: (Boolean) -> Unit) {
+    fun setupNewLock(
+            userName: String,
+            supervisorKey: String,
+            newPassword: String,
+            onComplete: (Boolean) -> Unit
+    ) {
         viewModelScope.launch {
             try {
                 smackSdk.lockApi
@@ -151,7 +168,7 @@ class RegistrationViewModel(private val smackSdk: SmackSdk) : ViewModel() {
                                     if (lock.isNew) {
                                         smackSdk.lockApi.setLockKey(
                                                 lock,
-                                                "MyUserName",
+                                                userName,
                                                 LocalDateTime.now().toEpochSecond(ZoneOffset.UTC),
                                                 supervisorKey,
                                                 newPassword
@@ -160,7 +177,7 @@ class RegistrationViewModel(private val smackSdk: SmackSdk) : ViewModel() {
                                         // New password is used to validate existing lock
                                         smackSdk.lockApi.validatePassword(
                                                 lock,
-                                                "MyUserName",
+                                                userName,
                                                 System.currentTimeMillis() / 1000,
                                                 newPassword
                                         )
@@ -168,7 +185,7 @@ class RegistrationViewModel(private val smackSdk: SmackSdk) : ViewModel() {
                             // Initialize session and unlock with the obtained key
                             smackSdk.lockApi.initializeSession(
                                     lock,
-                                    "MyUserName",
+                                    userName,
                                     System.currentTimeMillis() / 1000,
                                     key
                             )
@@ -187,7 +204,12 @@ class RegistrationViewModel(private val smackSdk: SmackSdk) : ViewModel() {
         }
     }
 
-    fun changePassword(supervisorKey: String, newPassword: String, onComplete: (Boolean) -> Unit) {
+    fun changePassword(
+            userName: String,
+            supervisorKey: String,
+            newPassword: String,
+            onComplete: (Boolean) -> Unit
+    ) {
         viewModelScope.launch {
             try {
                 smackSdk.lockApi
@@ -196,12 +218,11 @@ class RegistrationViewModel(private val smackSdk: SmackSdk) : ViewModel() {
                         .filterNotNull()
                         .take(1)
                         .collect { lock ->
-                            val username = "MyUserName"
                             val timestamp = System.currentTimeMillis() / 1000
 
                             smackSdk.lockApi.setLockKey(
                                     lock,
-                                    username,
+                                    userName,
                                     timestamp,
                                     supervisorKey,
                                     newPassword
@@ -218,7 +239,7 @@ class RegistrationViewModel(private val smackSdk: SmackSdk) : ViewModel() {
         }
     }
 
-    fun unlockLock(password: String, onComplete: (Boolean) -> Unit) {
+    fun unlockLock(userName: String, password: String, onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
             try {
                 Log.d("RegistrationViewModel", "starting")
@@ -229,20 +250,19 @@ class RegistrationViewModel(private val smackSdk: SmackSdk) : ViewModel() {
                         .filterNotNull()
                         .take(1)
                         .collect { lock ->
-                            val username = "MyUserName"
                             val timestamp = System.currentTimeMillis() / 1000
                             Log.d("RegistrationViewModel", "lock goted")
 
                             val key =
                                     smackSdk.lockApi.validatePassword(
                                             lock,
-                                            username,
+                                            userName,
                                             timestamp,
                                             password
                                     )
                             smackSdk.lockApi.initializeSession(
                                     lock,
-                                    username,
+                                    userName,
                                     timestamp,
                                     key,
                             )
@@ -258,7 +278,7 @@ class RegistrationViewModel(private val smackSdk: SmackSdk) : ViewModel() {
         }
     }
 
-    fun lockLock(password: String, onComplete: (Boolean) -> Unit) {
+    fun lockLock(userName: String, password: String, onComplete: (Boolean) -> Unit) {
         viewModelScope.launch {
             try {
                 Log.d("RegistrationViewModel", "starting")
@@ -269,16 +289,15 @@ class RegistrationViewModel(private val smackSdk: SmackSdk) : ViewModel() {
                         .filterNotNull()
                         .take(1)
                         .collect { lock ->
-                            val username = "MyUserName"
                             val timestamp = System.currentTimeMillis() / 1000
                             val key =
                                     smackSdk.lockApi.validatePassword(
                                             lock,
-                                            username,
+                                            userName,
                                             timestamp,
                                             password
                                     )
-                            smackSdk.lockApi.initializeSession(lock, username, timestamp, key)
+                            smackSdk.lockApi.initializeSession(lock, userName, timestamp, key)
 
                             smackSdk.lockApi.lock(lock, key)
                             onComplete(true)

@@ -41,53 +41,63 @@ import UIKit
 
       case "setupNewLock":
         guard let args = call.arguments as? [String: String],
+          let userName = args["userName"],
           let supervisorKey = args["supervisorKey"],
           let newPassword = args["newPassword"]
         else {
           result(
             FlutterError(
-              code: "INVALID_ARGS", message: "Missing arguments: supervisorKey or newPassword",
+              code: "INVALID_ARGS",
+              message: "Missing arguments: userName, supervisorKey or newPassword",
               details: nil))
           return
         }
-        self.setupNewLock(supervisorKey: supervisorKey, newPassword: newPassword, result: result)
+        self.setupNewLock(
+          userName: userName, supervisorKey: supervisorKey, newPassword: newPassword,
+          result: result)
 
       case "changePassword":
         guard let args = call.arguments as? [String: String],
+          let userName = args["userName"],  // Extract userName
           let supervisorKey = args["supervisorKey"],
           let newPassword = args["newPassword"]
         else {
           result(
             FlutterError(
-              code: "INVALID_ARGS", message: "Missing arguments: supervisorKey or newPassword",
+              code: "INVALID_ARGS",
+              message: "Missing arguments: userName, supervisorKey or newPassword",
               details: nil))
           return
         }
-        self.changePassword(supervisorKey: supervisorKey, newPassword: newPassword, result: result)
+        self.changePassword(
+          userName: userName, supervisorKey: supervisorKey, newPassword: newPassword,
+          result: result)
 
       case "unlockLock":
         guard let args = call.arguments as? [String: String],
+          let userName = args["userName"],  // Extract userName
           let password = args["password"]
         else {
           result(
             FlutterError(
-              code: "INVALID_ARGS", message: "Missing password for unlockLock", details: nil))
+              code: "INVALID_ARGS", message: "Missing userName or password for unlockLock",
+              details: nil))
           return
         }
-        // Pass the password to unlockLock, so it can generate the LockKey
-        self.unlockLock(password: password, result: result)
+        self.unlockLock(userName: userName, password: password, result: result)
 
       case "lockLock":
         guard let args = call.arguments as? [String: String],
+          let userName = args["userName"],  // Extract userName
           let password = args["password"]
         else {
           result(
             FlutterError(
-              code: "INVALID_ARGS", message: "Missing password for lockLock", details: nil))
-              return
+              code: "INVALID_ARGS", message: "Missing userName or password for lockLock",
+              details: nil))
+          return
         }
-        // Pass the password to lockLock, so it can generate the LockKey
-        self.lockLock(password: password, result: result)
+        self.lockLock(userName: userName, password: password, result: result)
 
       default:
         result(FlutterMethodNotImplemented)
@@ -113,6 +123,7 @@ import UIKit
 
   /// Sets up a new lock with a supervisor key and a new password.
   private func setupNewLock(
+    userName: String,  // Pass userName
     supervisorKey: String, newPassword: String, result: @escaping FlutterResult
   ) {
     self.lockApi?.getLock(cancelIfNotSetup: true) { [weak self] lockResult in
@@ -126,43 +137,46 @@ import UIKit
         switch generatedKeyResult {
         case .success(let generatedLockKey):
           let setupInfo = LockSetupInformation(
-            userName: "MyUserName",
+            userName: userName,
             date: Date(),
             supervisorKey: supervisorKey,
-            password: newPassword 
+            password: newPassword
           )
 
           self.lockApi?.setLockKey(setupInformation: setupInfo) { setKeyResult in
             switch setKeyResult {
-            case .success(let lockState): 
-                if case .completed(let retrievedLockKey) = lockState {
-                    print("Successfully set lock key during setup. Retrieved LockKey: \(retrievedLockKey.hex)")
-                    let info = LockActionInformation(
-                      userName: "MyUserName",
-                      date: Date(),
-                      key: generatedLockKey
-                    )
+            case .success(let lockState):
+              if case .completed(let retrievedLockKey) = lockState {
+                print(
+                  "Successfully set lock key during setup. Retrieved LockKey: \(retrievedLockKey.hex)"
+                )
+                let info = LockActionInformation(
+                  userName: userName,
+                  date: Date(),
+                  key: generatedLockKey
+                )
 
-                    self.lockApi?.unlock(information: info) { unlockResult in
-                      switch unlockResult {
-                      case .success:
-                        print("Successfully unlocked after setup.")
-                        result("Password changed and lock initialized")
-                      case .failure(let err):
-                        print("Unlock error after setup: \(err.localizedDescription)")
-                        result(
-                          FlutterError(
-                            code: "UNLOCK_FAILED_AFTER_SETUP", message: "Failed to unlock after setup",
-                            details: err.localizedDescription))
-                      }
-                    }
-                } else {
-                    print("Set lock key succeeded but did not return completed state with LockKey.")
+                self.lockApi?.unlock(information: info) { unlockResult in
+                  switch unlockResult {
+                  case .success:
+                    print("Successfully unlocked after setup.")
+                    result("Password changed and lock initialized")
+                  case .failure(let err):
+                    print("Unlock error after setup: \(err.localizedDescription)")
                     result(
-                        FlutterError(
-                            code: "SET_KEY_NO_LOCKKEY", message: "Set lock key succeeded but did not return LockKey",
-                            details: nil))
+                      FlutterError(
+                        code: "UNLOCK_FAILED_AFTER_SETUP", message: "Failed to unlock after setup",
+                        details: err.localizedDescription))
+                  }
                 }
+              } else {
+                print("Set lock key succeeded but did not return completed state with LockKey.")
+                result(
+                  FlutterError(
+                    code: "SET_KEY_NO_LOCKKEY",
+                    message: "Set lock key succeeded but did not return LockKey",
+                    details: nil))
+              }
 
             case .failure(let err):
               print("Set lock key error during setup: \(err.localizedDescription)")
@@ -173,11 +187,11 @@ import UIKit
             }
           }
         case .failure(let err):
-            print("Key generation failed: \(err.localizedDescription)")
-            result(
-                FlutterError(
-                    code: "KEY_GEN_FAILED", message: "Failed to generate lock key",
-                    details: err.localizedDescription))
+          print("Key generation failed: \(err.localizedDescription)")
+          result(
+            FlutterError(
+              code: "KEY_GEN_FAILED", message: "Failed to generate lock key",
+              details: err.localizedDescription))
         }
 
       case .failure(let error):
@@ -191,55 +205,59 @@ import UIKit
   }
 
   private func changePassword(
+    userName: String,
     supervisorKey: String, newPassword: String, result: @escaping FlutterResult
   ) {
     self.lockApi?.getLock(cancelIfNotSetup: false) { [weak self] lockResult in
-        guard let self = self else { return }
-        switch lockResult {
-        case .success(let lock):
-            let keyGenerator = KeyGenerator()
-            let generatedKeyResult = keyGenerator.generateKey(lockId: lock.id, password: newPassword)
+      guard let self = self else { return }
+      switch lockResult {
+      case .success(let lock):
+        let keyGenerator = KeyGenerator()
+        let generatedKeyResult = keyGenerator.generateKey(lockId: lock.id, password: newPassword)
 
-            switch generatedKeyResult {
-            case .success(let generatedLockKey):
-                let setupInfo = LockSetupInformation(
-                  userName: "MyUserName",
-                  date: Date(),
-                  supervisorKey: supervisorKey,
-                  password: newPassword
-                )
+        switch generatedKeyResult {
+        case .success(let generatedLockKey):
+          let setupInfo = LockSetupInformation(
+            userName: userName,
+            date: Date(),
+            supervisorKey: supervisorKey,
+            password: newPassword
+          )
 
-                self.lockApi?.setLockKey(setupInformation: setupInfo) { setKeyResult in
-                  switch setKeyResult {
-                  case .success:
-                    print("Password changed successfully.")
-                    result("Password changed")
-                  case .failure(let err):
-                    print("Change password error: \(err.localizedDescription)")
-                    result(
-                      FlutterError(
-                        code: "CHANGE_PASSWORD_FAILED", message: "Failed to change password",
-                        details: err.localizedDescription))
-                  }
-                }
+          self.lockApi?.setLockKey(setupInformation: setupInfo) { setKeyResult in
+            switch setKeyResult {
+            case .success:
+              print("Password changed successfully.")
+              result("Password changed")
             case .failure(let err):
-                print("Key generation failed during password change: \(err.localizedDescription)")
-                result(
-                    FlutterError(
-                        code: "KEY_GEN_FAILED_CHANGE_PASSWORD", message: "Failed to generate lock key for password change",
-                        details: err.localizedDescription))
-            }
-        case .failure(let err):
-            print("Get lock error during password change: \(err.localizedDescription)")
-            result(
+              print("Change password error: \(err.localizedDescription)")
+              result(
                 FlutterError(
-                    code: "GET_LOCK_FAILED_CHANGE_PASSWORD", message: "Failed to get lock before changing password",
-                    details: err.localizedDescription))
+                  code: "CHANGE_PASSWORD_FAILED", message: "Failed to change password",
+                  details: err.localizedDescription))
+            }
+          }
+        case .failure(let err):
+          print("Key generation failed during password change: \(err.localizedDescription)")
+          result(
+            FlutterError(
+              code: "KEY_GEN_FAILED_CHANGE_PASSWORD",
+              message: "Failed to generate lock key for password change",
+              details: err.localizedDescription))
         }
+      case .failure(let err):
+        print("Get lock error during password change: \(err.localizedDescription)")
+        result(
+          FlutterError(
+            code: "GET_LOCK_FAILED_CHANGE_PASSWORD",
+            message: "Failed to get lock before changing password",
+            details: err.localizedDescription
+          ))
+      }
     }
   }
 
-  private func unlockLock(password: String, result: @escaping FlutterResult) {
+  private func unlockLock(userName: String, password: String, result: @escaping FlutterResult) {
     getLock { [weak self] res in
       guard let self = self else { return }
       switch res {
@@ -249,13 +267,15 @@ import UIKit
 
         switch generatedKeyResult {
         case .success(let generatedLockKey):
-            self.continueWithSession(lock: lock, lockKey: generatedLockKey, action: .unlock, result: result)
+          self.continueWithSession(
+            lock: lock, userName: userName, lockKey: generatedLockKey, action: .unlock,
+            result: result)
         case .failure(let err):
-            print("Key generation failed for unlock: \(err.localizedDescription)")
-            result(
-                FlutterError(
-                    code: "KEY_GEN_FAILED_UNLOCK", message: "Failed to generate lock key for unlock",
-                    details: err.localizedDescription))
+          print("Key generation failed for unlock: \(err.localizedDescription)")
+          result(
+            FlutterError(
+              code: "KEY_GEN_FAILED_UNLOCK", message: "Failed to generate lock key for unlock",
+              details: err.localizedDescription))
         }
 
       case .failure(let err):
@@ -268,7 +288,7 @@ import UIKit
     }
   }
 
-  private func lockLock(password: String, result: @escaping FlutterResult) {
+  private func lockLock(userName: String, password: String, result: @escaping FlutterResult) {
     getLock { [weak self] res in
       guard let self = self else { return }
       switch res {
@@ -278,13 +298,15 @@ import UIKit
 
         switch generatedKeyResult {
         case .success(let generatedLockKey):
-            self.continueWithSession(lock: lock, lockKey: generatedLockKey, action: .lock, result: result)
+          self.continueWithSession(
+            lock: lock, userName: userName, lockKey: generatedLockKey, action: .lock,
+            result: result)
         case .failure(let err):
-            print("Key generation failed for lock: \(err.localizedDescription)")
-            result(
-                FlutterError(
-                    code: "KEY_GEN_FAILED_LOCK", message: "Failed to generate lock key for lock",
-                    details: err.localizedDescription))
+          print("Key generation failed for lock: \(err.localizedDescription)")
+          result(
+            FlutterError(
+              code: "KEY_GEN_FAILED_LOCK", message: "Failed to generate lock key for lock",
+              details: err.localizedDescription))
         }
 
       case .failure(let err):
@@ -302,13 +324,14 @@ import UIKit
   }
 
   private func continueWithSession(
-    lock: Lock, lockKey: [UInt8], action: LockAction, result: @escaping FlutterResult
+    lock: Lock, userName: String, lockKey: [UInt8], action: LockAction,
+    result: @escaping FlutterResult
   ) {
     // Create LockActionInformation with the generated LockKey.
     let info = LockActionInformation(
-      userName: "MyUserName",
+      userName: userName, 
       date: Date(),
-      key: lockKey 
+      key: lockKey
     )
 
     switch action {
@@ -344,8 +367,8 @@ import UIKit
   }
 
   func passwordToRawBytes(from password: String) -> [UInt8] {
-    let hashed = password.sha256() 
+    let hashed = password.sha256()
     let data = Data(hex: hashed)
-    return Array(data.prefix(16)) 
+    return Array(data.prefix(16))
   }
 }

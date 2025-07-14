@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 class SmackLockService {
@@ -18,8 +19,6 @@ class SmackLockService {
   Stream<bool> get lockPresenceStream => _lockPresenceController.stream;
 
   Future<void> _handleNativeCalls(MethodCall call) async {
-    print(
-        'Received native method call: ${call.method} with arguments: ${call.arguments}');
     if (call.method == 'lockPresent') {
       final bool present = call.arguments as bool;
       _lockPresenceController.add(present);
@@ -28,7 +27,6 @@ class SmackLockService {
 
   Future<bool> checkLockPresence() async {
     if (!Platform.isIOS) {
-      print("checkLockPresence is only supported on iOS for now.");
       return false;
     }
 
@@ -36,19 +34,22 @@ class SmackLockService {
       final bool result = await platform.invokeMethod('lockPresent');
       return result;
     } on PlatformException catch (e) {
-      print("Failed to check lock presence: '${e.message}'.");
+      if (kDebugMode) {
+        print("Failed to check lock presence: '${e.message}'.");
+      }
       return false;
     }
   }
 
   Future<String> setupNewLock(
-      String? supervisorKey, String? newPassword) async {
-    if (supervisorKey == null || newPassword == null) {
-      return "Supervisor key or password is null.";
+      String? userName, String? supervisorKey, String? newPassword) async {
+    if (userName == null || supervisorKey == null || newPassword == null) {
+      return "User name, supervisor key or password is null.";
     }
 
     try {
       final String? result = await platform.invokeMethod('setupNewLock', {
+        'userName': userName,
         'supervisorKey': supervisorKey,
         'newPassword': newPassword,
       });
@@ -58,9 +59,10 @@ class SmackLockService {
     }
   }
 
-  Future<String> unlockLock(String password) async {
+  Future<String> unlockLock(String userName, String password) async {
     try {
       final String? result = await platform.invokeMethod('unlockLock', {
+        'userName': userName,
         'password': password,
       });
       return result ?? "Unlock failed, no result returned.";
@@ -69,9 +71,10 @@ class SmackLockService {
     }
   }
 
-  Future<String> lockLock(String password) async {
+  Future<String> lockLock(String userName, String password) async {
     try {
       final String result = await platform.invokeMethod('lockLock', {
+        'userName': userName,
         'password': password,
       });
       return result;
@@ -81,9 +84,10 @@ class SmackLockService {
   }
 
   Future<String> changePassword(
-      String supervisorKey, String newPassword) async {
+      String userName, String supervisorKey, String newPassword) async {
     try {
       final String result = await platform.invokeMethod('changePassword', {
+        'userName': userName,
         'supervisorKey': supervisorKey,
         'newPassword': newPassword,
       });
